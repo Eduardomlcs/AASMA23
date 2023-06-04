@@ -148,6 +148,7 @@ class TaxiEnv(Env):
             state: {action: [] for action in self.actions}
             for state in range(num_states)
         }
+        
         for rowA in range(num_rows):
             for colA in range(num_columns):
                 for rowB in range(num_rows):
@@ -294,35 +295,56 @@ class TaxiEnv(Env):
 
     def action_mask(self, state: int):
         """Computes an action mask for the action space using the state information."""
-        mask = np.zeros(6, dtype=np.int8)
-        taxi_row, taxi_col, pass_loc, dest_idx = self.decode(state)
-        if taxi_row < 4:
-            mask[0] = 1
-        if taxi_row > 0:
-            mask[1] = 1
-        if taxi_col < 4 and self.desc[taxi_row + 1, 2 * taxi_col + 2] == b":":
-            mask[2] = 1
-        if taxi_col > 0 and self.desc[taxi_row + 1, 2 * taxi_col] == b":":
-            mask[3] = 1
-        if pass_loc < 4 and (taxi_row, taxi_col) == self.locs[pass_loc]:
-            mask[4] = 1
-        if pass_loc == 4 and (
-            (taxi_row, taxi_col) == self.locs[dest_idx]
-            or (taxi_row, taxi_col) in self.locs
+        mask = np.zeros((2,6), dtype=np.int8)
+        taxiA_row,taxiB_row, taxiA_col,taxiB_col, passA_loc,passB_loc, destA_idx,destB_idx= self.decode(state)
+        if taxiA_row < 4:
+            mask[0][0] = 1
+        if taxiA_row > 0:
+            mask[0][1] = 1
+        if taxiA_col < 4 and self.desc[taxiA_row + 1, 2 * taxiA_col + 2] == b":":
+            mask[0][2] = 1
+        if taxiA_col > 0 and self.desc[taxiA_row + 1, 2 * taxiA_col] == b":":
+            mask[0][3] = 1
+        if passA_loc < 4 and (taxiA_row, taxiA_col) == self.locs[passA_loc]:
+            mask[0][4] = 1
+        if passA_loc == 4 and (
+            (taxiA_row, taxiA_col) == self.locs[destA_idx]
+            or (taxiA_row, taxiA_col) in self.locs
         ):
-            mask[5] = 1
+            mask[0][5] = 1
+
+        if taxiB_row < 4:
+            mask[1][0] = 1
+        if taxiB_row > 0:
+            mask[1][1] = 1
+        if taxiB_col < 4 and self.desc[taxiB_row + 1, 2 * taxiB_col + 2] == b":":
+            mask[1][2] = 1
+        if taxiB_col > 0 and self.desc[taxiB_row + 1, 2 * taxiB_col] == b":":
+            mask[1][3] = 1
+        if passB_loc < 4 and (taxiB_row, taxiB_col) == self.locs[passB_loc]:
+            mask[1][4] = 1
+        if passB_loc == 4 and (
+            (taxiB_row, taxiB_col) == self.locs[destB_idx]
+            or (taxiB_row, taxiB_col) in self.locs
+        ):
+            mask[1][5] = 1
+
         return mask
 
     def step(self, a):
         transitions = self.P[self.s][a]
         i = categorical_sample([t[0] for t in transitions], self.np_random)
         p, s, r, t = transitions[i]
-        self.s = s
-        self.lastaction = a
+        a_mask = self.action_mask(s)
+        if a_mask[0][a[0]] == 1 and a_mask[1][a[1]] == 1:
+            self.s = s
+            self.lastaction = a
+        else:
+            return
 
         if self.render_mode == "human":
             self.render()
-        return (int(s), r, t, False, {"prob": p, "action_mask": self.action_mask(s)})
+        return (int(s), r, t, False, {"prob": p, "action_mask": a_mask})
 
     def reset(
         self,
@@ -333,7 +355,9 @@ class TaxiEnv(Env):
         super().reset(seed=seed)
         self.s = categorical_sample(self.initial_state_distrib, self.np_random)
         self.lastaction = None
+        self.a_mask = None
         self.taxi_orientation = 0
+        self.taxi2_orientation = 0
 
         if self.render_mode == "human":
             self.render()
@@ -482,28 +506,51 @@ class TaxiEnv(Env):
             loc = self.get_surf_loc(cell)
             self.window.blit(color_cell, (loc[0], loc[1] + 10))
 
-        taxi_row, taxi_col, pass_idx, dest_idx = self.decode(self.s)
+        taxiA_row,taxiB_row, taxiA_col,taxiB_col, passA_idx,passB_idx, destA_idx,destB_idx = self.decode(self.s)
 
-        if pass_idx < 4:
-            self.window.blit(self.passenger_img, self.get_surf_loc(self.locs[pass_idx]))
+        if passA_idx < 4:
+            self.window.blit(self.passenger_img, self.get_surf_loc(self.locs[passA_idx]))
 
-        if self.lastaction in [0, 1, 2, 3]:
-            self.taxi_orientation = self.lastaction
-        dest_loc = self.get_surf_loc(self.locs[dest_idx])
-        taxi_location = self.get_surf_loc((taxi_row, taxi_col))
+        if self.lastaction != None and self.lastaction[0] in [0, 1, 2, 3]:
+            self.taxi_orientation = self.lastaction[0]
+        destA_loc = self.get_surf_loc(self.locs[destA_idx])
+        taxiA_location = self.get_surf_loc((taxiA_row, taxiA_col))
 
-        if dest_loc[1] <= taxi_location[1]:
+        if destA_loc[1] <= taxiA_location[1]:
             self.window.blit(
                 self.destination_img,
-                (dest_loc[0], dest_loc[1] - self.cell_size[1] // 2),
+                (destA_loc[0], destA_loc[1] - self.cell_size[1] // 2),
             )
-            self.window.blit(self.taxi_imgs[self.taxi_orientation], taxi_location)
+            self.window.blit(self.taxi_imgs[self.taxi_orientation], taxiA_location)
         else:  # change blit order for overlapping appearance
-            self.window.blit(self.taxi_imgs[self.taxi_orientation], taxi_location)
+            self.window.blit(self.taxi_imgs[self.taxi_orientation], taxiA_location)
             self.window.blit(
                 self.destination_img,
-                (dest_loc[0], dest_loc[1] - self.cell_size[1] // 2),
+                (destA_loc[0], destA_loc[1] - self.cell_size[1] // 2),
             )
+        
+
+        if passB_idx < 4:
+            self.window.blit(self.passenger2_img, self.get_surf_loc(self.locs[passB_idx]))
+
+        if self.lastaction != None and self.lastaction[1] in [0, 1, 2, 3]:
+            self.taxi_orientation = self.lastaction[1]
+        destB_loc = self.get_surf_loc(self.locs[destB_idx])
+        taxiB_location = self.get_surf_loc((taxiB_row, taxiB_col))
+
+        if destB_loc[1] <= taxiB_location[1]:
+            self.window.blit(
+                self.destination2_img,
+                (destB_loc[0], destB_loc[1] - self.cell_size[1] // 2),
+            )
+            self.window.blit(self.taxi2_imgs[self.taxi2_orientation], taxiB_location)
+        else:  # change blit order for overlapping appearance
+            self.window.blit(self.taxi2_imgs[self.taxi2_orientation], taxiB_location)
+            self.window.blit(
+                self.destination2_img,
+                (destB_loc[0], destB_loc[1] - self.cell_size[1] // 2),
+            )
+        
 
         if mode == "human":
             pygame.display.update()
