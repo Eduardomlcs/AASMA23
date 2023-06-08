@@ -164,9 +164,7 @@ class TaxiEnv(Env):
                                             # defaults
                                             new_rowA, new_colA, new_passA_idx = rowA, colA, passA_idx
                                             new_rowB, new_colB, new_passB_idx = rowB, colB, passB_idx
-                                            reward = (
-                                                -1
-                                            )  # default reward when there is no pickup/dropoff
+                                            reward = [-1,-1]  # default reward when there is no pickup/dropoff
                                             terminated = False
                                             taxiA_loc = (rowA, colA)
                                             taxiB_loc = (rowB, colB)
@@ -185,15 +183,15 @@ class TaxiEnv(Env):
                                                 elif passB_idx < 4 and taxiA_loc == locs[passB_idx] and passA_idx!=4:
                                                     new_passB_idx = 4
                                                 else:  # passenger not at location
-                                                    reward = -10
+                                                    reward[0] = -10
                                             elif action[0] == 5:  # dropoff PRECISA DE SER ALTERADO
                                                 #TODO terminacao do programa
                                                 if (taxiA_loc == locs[destA_idx]) and passA_idx == 4:
                                                     new_passA_idx = destA_idx
                                                     terminated = True
-                                                    reward = 20
+                                                    reward[0] = 20
                                                 else:  # dropoff at wrong location
-                                                    reward = -10
+                                                    reward[0] = -10
                                                 
                                                 
                                             if action[1] == 0:
@@ -210,19 +208,20 @@ class TaxiEnv(Env):
                                                 elif passB_idx < 4 and taxiB_loc == locs[passB_idx] and passA_idx!=5:
                                                     new_passB_idx = 5
                                                 else:  # passenger not at location
-                                                    reward = -10
+                                                    reward[1] = -10
                                             elif action[1] == 5:  # dropoff PRECISA DE SER ALTERADO
                                                 #TODO terminacao do programa
                                                 if (taxiB_loc == locs[destB_idx]) and passB_idx == 5:
                                                     new_passB_idx = destB_idx
                                                     terminated = True
-                                                    reward = 20
+                                                    reward[1] = 20
                                                 else:  # dropoff at wrong location
-                                                    reward = -10
+                                                    reward[1] = -10
                                                     
                                             #Choques entre carros
                                             if(new_rowA==new_rowB and new_colA==new_colB):
-                                                reward= -30 #very negative
+                                                reward[0]= -30
+                                                reward[1]= -30 #very negative
                                                 new_rowA, new_rowB, new_colA, new_colB = rowA,rowB,colA,colB       
                                             new_state = self.encode(
                                                 new_rowA, new_colA,new_rowB,new_colB, new_passA_idx, destA_idx, new_passB_idx, destB_idx
