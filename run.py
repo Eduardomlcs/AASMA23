@@ -1,10 +1,9 @@
 import argparse
 
 import numpy as np
-from gym import Env
 import random
 
-from taxi import RandomAgent
+from taxi import RandomAgent, InputAgent
 from taxi.taxi_env import taxi_env
 
 # create Taxi environment
@@ -13,8 +12,8 @@ env = taxi_env.TaxiEnv(render_mode="human")
 # create a new instance of taxi, and get the initial state
 state,info = env.reset()
 num_steps = 99
-taxi = RandomAgent(1)
-taxi2 = RandomAgent(2)
+taxi = InputAgent.InputAgent(1)
+taxi2 = InputAgent.InputAgent(2)
 for s in range(num_steps+1):
     print(f"step: {s} out of {num_steps}")
     taxi.see(state)
