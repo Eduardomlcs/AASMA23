@@ -13,8 +13,15 @@ for s in range(num_steps+1):
     print(f"step: {s} out of {num_steps}")
 
     # sample a random action from the list of available actions
-    actionA = int(random.randint(0,5))
-    actionB = int(random.randint(0,5))
+    # print("Select action A:")
+    # actionA = int(random.randint(0,5))
+    # print("Select action B:")
+    # actionB = int(random.randint(0,5))
+
+    print("Select action A:")
+    actionA = int(input())
+    print("Select action B:")
+    actionB = int(input())
 
     action = (actionA,actionB)
 
