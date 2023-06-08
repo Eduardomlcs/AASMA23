@@ -164,9 +164,7 @@ class TaxiEnv(Env):
                                             # defaults
                                             new_rowA, new_colA, new_passA_idx = rowA, colA, passA_idx
                                             new_rowB, new_colB, new_passB_idx = rowB, colB, passB_idx
-                                            reward = (
-                                                -1
-                                            )  # default reward when there is no pickup/dropoff
+                                            reward = [-1,-1]  # default reward when there is no pickup/dropoff
                                             terminated = False
                                             taxiA_loc = (rowA, colA)
                                             taxiB_loc = (rowB, colB)
@@ -175,7 +173,7 @@ class TaxiEnv(Env):
                                                 new_rowA = min(rowA + 1, max_row)
                                             elif action[0] == 1:
                                                 new_rowA = max(rowA - 1, 0)
-                                            if action[0] == 2 and self.desc[1 + rowA, 2 * colA + 2] == b":":
+                                            elif action[0] == 2 and self.desc[1 + rowA, 2 * colA + 2] == b":":
                                                 new_colA = min(colA + 1, max_col)
                                             elif action[0] == 3 and self.desc[1 + rowA, 2 * colA] == b":":
                                                 new_colA = max(colA - 1, 0)
@@ -185,22 +183,22 @@ class TaxiEnv(Env):
                                                 elif passB_idx < 4 and taxiA_loc == locs[passB_idx] and passA_idx!=4:
                                                     new_passB_idx = 4
                                                 else:  # passenger not at location
-                                                    reward = -10
+                                                    reward[0] = -10
                                             elif action[0] == 5:  # dropoff PRECISA DE SER ALTERADO
                                                 #TODO terminacao do programa
                                                 if (taxiA_loc == locs[destA_idx]) and passA_idx == 4:
                                                     new_passA_idx = destA_idx
                                                     terminated = True
-                                                    reward = 20
+                                                    reward[0] = 20
                                                 else:  # dropoff at wrong location
-                                                    reward = -10
+                                                    reward[0] = -10
                                                 
                                                 
                                             if action[1] == 0:
                                                 new_rowB = min(rowB + 1, max_row)
                                             elif action[1] == 1:
                                                 new_rowB = max(rowB - 1, 0)
-                                            if action[1] == 2 and self.desc[1 + rowB, 2 * colB + 2] == b":":
+                                            elif action[1] == 2 and self.desc[1 + rowB, 2 * colB + 2] == b":":
                                                 new_colB = min(colB + 1, max_col)
                                             elif action[1] == 3 and self.desc[1 + rowB, 2 * colB] == b":":
                                                 new_colB = max(colB - 1, 0)
@@ -210,17 +208,21 @@ class TaxiEnv(Env):
                                                 elif passB_idx < 4 and taxiB_loc == locs[passB_idx] and passA_idx!=5:
                                                     new_passB_idx = 5
                                                 else:  # passenger not at location
-                                                    reward = -10
+                                                    reward[1] = -10
                                             elif action[1] == 5:  # dropoff PRECISA DE SER ALTERADO
                                                 #TODO terminacao do programa
                                                 if (taxiB_loc == locs[destB_idx]) and passB_idx == 5:
                                                     new_passB_idx = destB_idx
                                                     terminated = True
-                                                    reward = 20
+                                                    reward[1] = 20
                                                 else:  # dropoff at wrong location
-                                                    reward = -10
+                                                    reward[1] = -10
                                                     
-                                                    
+                                            #Choques entre carros
+                                            if(new_rowA==new_rowB and new_colA==new_colB):
+                                                reward[0]= -30
+                                                reward[1]= -30 #very negative
+                                                new_rowA, new_rowB, new_colA, new_colB = rowA,rowB,colA,colB       
                                             new_state = self.encode(
                                                 new_rowA, new_colA,new_rowB,new_colB, new_passA_idx, destA_idx, new_passB_idx, destB_idx
                                             )
@@ -241,19 +243,19 @@ class TaxiEnv(Env):
             WINDOW_SIZE[1] / self.desc.shape[0],
         )
         self.taxi_imgs = None
-        self.taxi2_imgs = None
+        self.taxiB_imgs = None
         self.taxi_orientation = 0
-        self.taxi2_orientation = 0
+        self.taxiB_orientation = 0
         self.passenger_img = None
-        self.passenger2_img = None
+        self.passengerB_img = None
         self.destination_img = None
-        self.destination2_img = None
+        self.destinationB_img = None
         self.median_horiz = None
         self.median_vert = None
         self.background_img = None
 
     
-    def encode(self,rowA, colA,rowB,colB, passA_idx, destA_idx, passB_idx, destB_idx):# taxi_row, taxi_col, pass_loc, dest_idx
+    def encode(self,rowA,colA,rowB,colB, passA_idx, destA_idx, passB_idx, destB_idx):# taxi_row, taxi_col, pass_loc, dest_idx
     # (5) 5, 5, 4
         i = rowA
         i*=5
@@ -296,7 +298,7 @@ class TaxiEnv(Env):
     def action_mask(self, state: int):
         """Computes an action mask for the action space using the state information."""
         mask = np.zeros((2,6), dtype=np.int8)
-        taxiA_row,taxiB_row, taxiA_col,taxiB_col, passA_loc,passB_loc, destA_idx,destB_idx= self.decode(state)
+        taxiA_row,taxiA_col,taxiB_row,taxiB_col, passA_loc, destA_idx,passB_loc,destB_idx= self.decode(state)
         if taxiA_row < 4:
             mask[0][0] = 1
         if taxiA_row > 0:
@@ -330,18 +332,41 @@ class TaxiEnv(Env):
             mask[1][5] = 1
 
         return mask
+    
+    def valid_actions(self,mask):
+        valid = []
+        for i in range(2):
+            for j in range(6):
+                if mask[i][j] == 1:
+                    valid = valid + [(i,j),]
+        return valid
+    
+    def valid_states(self,state,valid_actions):
+        valid = []
+        for action in valid_actions:
+            transitions = self.P[state][action]
+            i = categorical_sample([t[0] for t in transitions], self.np_random)
+            _, s, _, _ = transitions[i]
+            valid = valid + [s,]
+        return valid
+
 
     def step(self, a):
         transitions = self.P[self.s][a]
+        print(a)
+        print(transitions)
         i = categorical_sample([t[0] for t in transitions], self.np_random)
+        print(i)
         p, s, r, t = transitions[i]
-        a_mask = self.action_mask(s)
+        
         self.s = s
         self.lastaction = a
-
-        if self.render_mode == "human":
-            self.render()
-        return (int(s), r, t, False, {"prob": p, "action_mask": a_mask})
+        actions = self.valid_actions(self.action_mask(s))
+        states = self.valid_states(s,actions)
+        assert len(states) == len(actions)
+        #if self.render_mode == "human":
+            #self.render()
+        return (int(s), r, t, False, {"prob": p, "action_mask": self.action_mask(s), "valid_states": states, "valid_actions": actions})
 
     def reset(
         self,
@@ -354,11 +379,13 @@ class TaxiEnv(Env):
         self.lastaction = None
         self.a_mask = None
         self.taxi_orientation = 0
-        self.taxi2_orientation = 0
+        self.taxiB_orientation = 0
+        actions = self.valid_actions(self.action_mask(self.s))
+        states = self.valid_states(self.s,actions)
 
         if self.render_mode == "human":
             self.render()
-        return int(self.s), {"prob": 1.0, "action_mask": self.action_mask(self.s)}
+        return int(self.s), {"prob": 1.0, "action_mask": self.action_mask(self.s), "valid_states": states, "valid_actions": actions}
 
     def render(self):
         if self.render_mode is None:
@@ -408,15 +435,15 @@ class TaxiEnv(Env):
                 for file_name in file_names
             ]
             
-        if self.taxi2_imgs is None:
+        if self.taxiB_imgs is None:
             file_names = [
-                path.join(path.dirname(__file__), "img/cab_front.png"),
-                path.join(path.dirname(__file__), "img/cab_rear.png"),
-                path.join(path.dirname(__file__), "img/cab_right.png"),
-                path.join(path.dirname(__file__), "img/cab_left.png"),
+                path.join(path.dirname(__file__), "img/cab_frontB.png"),
+                path.join(path.dirname(__file__), "img/cab_rearB.png"),
+                path.join(path.dirname(__file__), "img/cab_rightB.png"),
+                path.join(path.dirname(__file__), "img/cab_leftB.png"),
             ]
             
-            self.taxi2_imgs = [
+            self.taxiB_imgs = [
                 pygame.transform.scale(pygame.image.load(file_name), self.cell_size)
                 for file_name in file_names
             ]
@@ -427,9 +454,9 @@ class TaxiEnv(Env):
                 pygame.image.load(file_name), self.cell_size
             )
             
-        if self.passenger2_img is None:
-            file_name = path.join(path.dirname(__file__), "img/passenger.png")
-            self.passenger2_img = pygame.transform.scale(
+        if self.passengerB_img is None:
+            file_name = path.join(path.dirname(__file__), "img/passengerB.png")
+            self.passengerB_img = pygame.transform.scale(
                 pygame.image.load(file_name), self.cell_size
             )
             
@@ -440,12 +467,12 @@ class TaxiEnv(Env):
             )
             self.destination_img.set_alpha(170)
             
-        if self.destination2_img is None:
-            file_name = path.join(path.dirname(__file__), "img/hotel.png")
-            self.destination2_img = pygame.transform.scale(
+        if self.destinationB_img is None:
+            file_name = path.join(path.dirname(__file__), "img/hotelB.png")
+            self.destinationB_img = pygame.transform.scale(
                 pygame.image.load(file_name), self.cell_size
             )
-            self.destination2_img.set_alpha(170)
+            self.destinationB_img.set_alpha(170)
             
         if self.median_horiz is None:
             file_names = [
@@ -502,52 +529,36 @@ class TaxiEnv(Env):
             color_cell.fill(color)
             loc = self.get_surf_loc(cell)
             self.window.blit(color_cell, (loc[0], loc[1] + 10))
-
-        taxiA_row,taxiB_row, taxiA_col,taxiB_col, passA_idx,passB_idx, destA_idx,destB_idx = self.decode(self.s)
-
-        if passA_idx < 4:
-            self.window.blit(self.passenger_img, self.get_surf_loc(self.locs[passA_idx]))
+        taxiA_row,taxiA_col,taxiB_row,taxiB_col, passA_loc, destA_idx,passB_loc,destB_idx = self.decode(self.s)
 
         if self.lastaction != None and self.lastaction[0] in [0, 1, 2, 3]:
             self.taxi_orientation = self.lastaction[0]
+        
+        if self.lastaction != None and self.lastaction[1] in [0, 1, 2, 3]:
+            self.taxiB_orientation = self.lastaction[1]
+        
         destA_loc = self.get_surf_loc(self.locs[destA_idx])
         taxiA_location = self.get_surf_loc((taxiA_row, taxiA_col))
-
-        if destA_loc[1] <= taxiA_location[1]:
-            self.window.blit(
-                self.destination_img,
-                (destA_loc[0], destA_loc[1] - self.cell_size[1] // 2),
-            )
-            self.window.blit(self.taxi_imgs[self.taxi_orientation], taxiA_location)
-        else:  # change blit order for overlapping appearance
-            self.window.blit(self.taxi_imgs[self.taxi_orientation], taxiA_location)
-            self.window.blit(
-                self.destination_img,
-                (destA_loc[0], destA_loc[1] - self.cell_size[1] // 2),
-            )
-        
-
-        if passB_idx < 4:
-            self.window.blit(self.passenger2_img, self.get_surf_loc(self.locs[passB_idx]))
-
-        if self.lastaction != None and self.lastaction[1] in [0, 1, 2, 3]:
-            self.taxi_orientation = self.lastaction[1]
         destB_loc = self.get_surf_loc(self.locs[destB_idx])
         taxiB_location = self.get_surf_loc((taxiB_row, taxiB_col))
-
-        if destB_loc[1] <= taxiB_location[1]:
-            self.window.blit(
-                self.destination2_img,
-                (destB_loc[0], destB_loc[1] - self.cell_size[1] // 2),
-            )
-            self.window.blit(self.taxi2_imgs[self.taxi2_orientation], taxiB_location)
-        else:  # change blit order for overlapping appearance
-            self.window.blit(self.taxi2_imgs[self.taxi2_orientation], taxiB_location)
-            self.window.blit(
-                self.destination2_img,
-                (destB_loc[0], destB_loc[1] - self.cell_size[1] // 2),
-            )
         
+        self.window.blit(
+            self.destination_img,
+            (destA_loc[0], destA_loc[1] - self.cell_size[1] // 2),
+        )
+        self.window.blit(
+            self.destinationB_img,
+            (destB_loc[0], destB_loc[1] - self.cell_size[1] // 2),
+        )
+        
+        if passA_loc < 4:
+            self.window.blit(self.passenger_img, self.get_surf_loc(self.locs[passA_loc]))
+            
+        if passB_loc < 4:
+            self.window.blit(self.passengerB_img, self.get_surf_loc(self.locs[passB_loc]))
+        
+        self.window.blit(self.taxiB_imgs[self.taxiB_orientation], taxiB_location)
+        self.window.blit(self.taxi_imgs[self.taxi_orientation], taxiA_location)        
 
         if mode == "human":
             pygame.display.update()
@@ -608,3 +619,8 @@ class TaxiEnv(Env):
 
 # Taxi rider from https://franuka.itch.io/rpg-asset-pack
 # All other assets by Mel Tillery http://www.cyaneus.com/
+
+
+
+
+
