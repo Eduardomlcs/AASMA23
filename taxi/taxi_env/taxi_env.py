@@ -339,6 +339,21 @@ class TaxiEnv(Env):
         """Computes an action mask for the action space using the state information."""
         mask = np.zeros((2,6), dtype=np.int8)
         taxiA_row,taxiA_col,taxiB_row,taxiB_col, passA_loc, destA_idx,passB_loc,destB_idx= self.decode(state)
+        
+        """
+        next_moves = [[],[]]
+        car_pos = [(taxiB_row,taxiB_col),(taxiA_row,taxiA_col)]
+
+        next_moves[0].append(tuple[taxiA_row, taxiA_col + 1]) 
+        next_moves[0].append(tuple[taxiA_row, taxiA_col - 1]) 
+        next_moves[0].append(tuple[taxiA_row + 1, taxiA_col])
+        next_moves[0].append(tuple[taxiA_row -1, taxiA_col])
+        next_moves[1].append(tuple[taxiB_row, taxiB_col + 1]) 
+        next_moves[1].append(tuple[taxiB_row, taxiB_col - 1]) 
+        next_moves[1].append(tuple[taxiB_row + 1, taxiB_col])
+        next_moves[1].append(tuple[taxiB_row -1, taxiB_col])
+        """
+
         if taxiA_row < 4:
             mask[0][0] = 1
         if taxiA_row > 0:
@@ -371,6 +386,12 @@ class TaxiEnv(Env):
         ):
             mask[1][5] = 1
 
+
+        # for i in range(2):
+        #    for j in range(4):
+        #       if next_moves[i][j] == car_pos[i]:
+        #            mask[i][j] = 0
+
         return mask
     
     def valid_actions(self,mask):
@@ -382,6 +403,7 @@ class TaxiEnv(Env):
                             valid.append((i, j))
         return valid
     
+    """
     def valid_states(self,state,valid_actions):
         valid = []
         actions_remove = []
@@ -396,23 +418,22 @@ class TaxiEnv(Env):
         for action in actions_remove:
             valid_actions.remove(action)
         return (valid, valid_actions)
-
+    """
 
     def step(self, a):
         transitions = self.P[self.s][a]
-        print(transitions)
         i = categorical_sample([t[0] for t in transitions], self.np_random)
         p, s, r, t = transitions[i]
         self.laststate = self.s
         self.s = s
         self.lastaction = a
         actions = self.valid_actions(self.action_mask(s))
-        states = self.valid_states(s,actions)
-        print(states)
-        assert len(states[0]) == len(states[1])
+        #states = self.valid_states(s,actions)
+        #print(states)
+        #assert len(states[0]) == len(states[1])
         if self.render_mode == "human":
             self.render()
-        return (int(s), r, t, False, {"prob": p, "action_mask": self.action_mask(s), "valid_states": states[0], "valid_actions": states[1]})
+        return (int(s), r, t, False, {"prob": p, "action_mask": self.action_mask(s), "valid_actions": actions})
 
     def reset(
         self,
@@ -428,11 +449,11 @@ class TaxiEnv(Env):
         self.taxi_orientation = 0
         self.taxiB_orientation = 0
         actions = self.valid_actions(self.action_mask(self.s))
-        states = self.valid_states(self.s,actions)
+        #states = self.valid_states(self.s,actions)
 
         if self.render_mode == "human":
             self.render()
-        return int(self.s), {"prob": 1.0, "action_mask": self.action_mask(self.s), "valid_states": states[0], "valid_actions": states[1]}
+        return int(self.s), {"prob": 1.0, "action_mask": self.action_mask(self.s), "valid_actions": actions}
 
     def render(self):
         if self.render_mode is None:

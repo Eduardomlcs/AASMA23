@@ -1,6 +1,16 @@
 from taxi import Agent
+from taxi.a_star_heuristic import a_star_search
 import numpy as np
 
+MAP = [
+    "+---------+",
+    "|R: | : :G|",
+    "| : | : : |",
+    "| : : : : |",
+    "| | : | : |",
+    "|Y| : |B: |",
+    "+---------+",
+]
 
 def decode(i):
     out = []
@@ -29,18 +39,21 @@ class HeuristicAgent(Agent):
         super(HeuristicAgent, self).__init__("Heuristic Agent")
         self.locs = [(0, 0), (0, 4), (4, 0), (4, 3)]
         self.id = id
-        self.lastaction = None
-        self.short_distance = None
+        self.map = np.asarray(MAP, dtype="c")
 
-    def heuristic(self,state):
+    def heuristic(self):
         # Calculate the estimated cost from the current state to the goal state (destination)
         # The state represents the agent's location (x, y) in the environment
-        
-        taxiA_row,taxiA_col,taxiB_row,taxiB_col,passA_loc,destA_idx,passB_loc,destB_idx= decode(state)
+        actions = []
+        taxiA_row,taxiA_col,taxiB_row,taxiB_col,passA_loc,destA_idx,passB_loc,destB_idx= decode(self.observation)
         # Extract the agent's location from the state
-        agent_location = (taxiA_row,taxiA_col) if self.id == 1 else (taxiB_row,taxiB_col)
+        self.agent_location = (taxiA_row,taxiA_col) if self.id == 1 else (taxiB_row,taxiB_col)
         pass_location = passA_loc if self.id == 1 else passB_loc
         dest_idx = destA_idx if self.id == 1 else destB_idx
+        if  (pass_location != 4 and pass_location != 5) and self.agent_location == self.locs[pass_location]:
+            return 0
+        if self.agent_location == self.locs[dest_idx] and (pass_location == 4 or pass_location == 5):
+            return 1
         if pass_location == 4 or pass_location == 5:
             # Define the goal state as the passenger's destination (drop-off location)
             goal_state = self.locs[dest_idx]
@@ -48,28 +61,43 @@ class HeuristicAgent(Agent):
             # Define the goal state as the passenger's pickup location
             goal_state = self.locs[pass_location]
         
-        # Calculate the Manhattan distance between the agent's location and the goal state
-        distance = abs(agent_location[0] - goal_state[0]) + abs(agent_location[1] - goal_state[1])
-        
-        # Return the estimated cost (heuristic value)
-        return distance
+        convert_agent_location = (self.agent_location[0] + 1, self.agent_location[1]*2 + 1)
+        convert_goal_state = (goal_state[0] + 1, goal_state[1]*2 + 1)
 
-    def action(self,info) -> int:
-        # Get the valid actions from the environment observation
-        valid_actions = info["valid_actions"]
-        for action in valid_actions:
-            action_aux = action[0] if self.id == 1 else action[1]
-            if action_aux == 4:
-                return action_aux 
-        print(info["action_mask"])
-        print(valid_actions)
-        valid_states = info["valid_states"]
-        # Calculate the heuristic value for each valid action
-        heuristic_values = [self.heuristic(state) for state in valid_states]
-        print(heuristic_values)
-        # Choose the action with the lowest heuristic value
-        actions = valid_actions[np.argmin(heuristic_values)]
-        action = actions[0] if self.id == 1 else actions[1]
-        self.lastaction = action
-        self.short_distance = (np.amin(heuristic_values),np.argmin(heuristic_values))
-        return action
+        path = a_star_search(convert_agent_location,convert_goal_state,self.map)
+        
+        print("Caminho ",self.id,": ",path)
+
+        """
+        for step in path:
+            if step[0] - 1 == agent_location[0]:
+                actions = actions + [2,]
+            elif step[0] + 1 == agent_location[0]:
+                actions = actions + [3,]
+            elif step[1] - 1 == agent_location[1]:
+                actions = actions + [0,]
+            elif step[1] + 1 == agent_location[1]:
+                actions = actions + [1,]
+        """
+
+        # Return the estimated cost (heuristic value)
+        return path
+
+    def action(self) -> int:
+        path = self.heuristic()
+        if path == 0:
+            return 4
+        if path == 1:
+            return 5
+        step = path[1]
+        self.step = step
+        start = path[0]
+        if step[0] - 1 == start[0]:
+            return 0 #BAIXO
+        elif step[0] + 1 == start[0]:
+            return 1 #CIMA
+        elif step[1] - 1 == start[1]:
+            return 2 #DIREITA
+        elif step[1] + 1 == start[1]:
+            return 3 #ESQUERDA
+        
