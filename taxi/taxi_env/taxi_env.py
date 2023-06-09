@@ -4,7 +4,7 @@ from os import path
 from typing import Optional
 
 import numpy as np
-
+import random
 import gymnasium as gym
 from gymnasium import Env, spaces, utils
 from gymnasium.envs.toy_text.utils import categorical_sample
@@ -158,7 +158,7 @@ class TaxiEnv(Env):
                                 for passB_idx in range(len(locs) + 2):  # +1 for being inside taxi
                                     for destB_idx in range(len(locs)):
                                         state = self.encode(rowA, colA,rowB,colB, passA_idx, destA_idx, passB_idx, destB_idx)
-                                        if passA_idx < 4 and passB_idx<4 and passA_idx != destA_idx and passB_idx!= destB_idx and (rowA != rowB or colA != colB ):
+                                        if passA_idx < 4 and passB_idx<4 and passA_idx != destA_idx and passB_idx!= destB_idx and (rowA != rowB or colA != colB ) and passA_idx!=passB_idx:
                                             self.initial_state_distrib[state] += 1
                                         for action in self.actions:
                                             # defaults
@@ -180,14 +180,34 @@ class TaxiEnv(Env):
                                             elif action[0] == 4:  # pickup
                                                 if passA_idx < 4 and taxiA_loc == locs[passA_idx] and passB_idx!=4:
                                                     new_passA_idx = 4
+                                                    reward[0] = 1
                                                 elif passB_idx < 4 and taxiA_loc == locs[passB_idx] and passA_idx!=4:
                                                     new_passB_idx = 4
+                                                    reward[0] = 1
                                                 else:  # passenger not at location
                                                     reward[0] = -10
                                             elif action[0] == 5:  # dropoff PRECISA DE SER ALTERADO
                                                 #TODO terminacao do programa
-                                                if (taxiA_loc == locs[destA_idx]) and passA_idx == 4:
-                                                    new_passA_idx = destA_idx
+                                                if (taxiA_loc == locs[destA_idx] and passA_idx == 4):
+                                                    possible_new_locs=locs.copy()
+                                                    possible_new_locs.pop(destA_idx)
+                                                    if(passB_idx<4 and passB_idx!=destA_idx):
+                                                        possible_new_locs.remove(locs[passB_idx])
+                                                    new_passA_idx = locs.index(random.choice(possible_new_locs))
+                                                    auxdest=[0,1,2,3]
+                                                    auxdest.pop(new_passA_idx)
+                                                    destA_idx =random.choice(auxdest)
+                                                    terminated = True
+                                                    reward[0] = 20
+                                                elif(taxiA_loc == locs[destB_idx] and passB_idx ==4):
+                                                    possible_new_locs=locs.copy()
+                                                    possible_new_locs.pop(destB_idx)
+                                                    if(passA_idx<4 and passA_idx!=destB_idx):
+                                                        possible_new_locs.remove(locs[passA_idx])
+                                                    new_passB_idx = locs.index(random.choice(possible_new_locs))
+                                                    auxdest=[0,1,2,3]
+                                                    auxdest.pop(new_passB_idx)
+                                                    destB_idx =random.choice(auxdest)
                                                     terminated = True
                                                     reward[0] = 20
                                                 else:  # dropoff at wrong location
@@ -205,21 +225,41 @@ class TaxiEnv(Env):
                                             elif action[1] == 4:  # pickup
                                                 if passA_idx < 4 and taxiB_loc == locs[passA_idx] and passB_idx!=5:
                                                     new_passA_idx = 5
+                                                    reward[1] = 1
                                                 elif passB_idx < 4 and taxiB_loc == locs[passB_idx] and passA_idx!=5:
                                                     new_passB_idx = 5
+                                                    reward[1] = 1
                                                 else:  # passenger not at location
                                                     reward[1] = -10
                                             elif action[1] == 5:  # dropoff PRECISA DE SER ALTERADO
                                                 #TODO terminacao do programa
-                                                if (taxiB_loc == locs[destB_idx]) and passB_idx == 5:
-                                                    new_passB_idx = destB_idx
+                                                if (taxiB_loc == locs[destB_idx] and passB_idx == 5):
+                                                    possible_new_locs=locs.copy()
+                                                    possible_new_locs.pop(destB_idx)
+                                                    if(passA_idx<4 and passA_idx!=destB_idx):
+                                                        possible_new_locs.remove(locs[passA_idx])
+                                                    new_passB_idx = locs.index(random.choice(possible_new_locs))
+                                                    auxdest=[0,1,2,3]
+                                                    auxdest.pop(new_passB_idx)
+                                                    destB_idx =random.choice(auxdest)
+                                                    terminated = True
+                                                    reward[1] = 20
+                                                elif (taxiB_loc == locs[destA_idx] and passA_idx == 5):
+                                                    possible_new_locs=locs.copy()
+                                                    possible_new_locs.pop(destA_idx)
+                                                    if(passB_idx<4 and passB_idx!=destA_idx):
+                                                        possible_new_locs.remove(locs[passB_idx])
+                                                    new_passA_idx = locs.index(random.choice(possible_new_locs))
+                                                    auxdest=[0,1,2,3]
+                                                    auxdest.pop(new_passA_idx)
+                                                    destA_idx =random.choice(auxdest)
                                                     terminated = True
                                                     reward[1] = 20
                                                 else:  # dropoff at wrong location
                                                     reward[1] = -10
                                                     
                                             #Choques entre carros
-                                            if(new_rowA==new_rowB and new_colA==new_colB):
+                                            if((new_rowA==new_rowB and new_colA==new_colB)or(rowA==rowB==new_rowA==new_rowB and new_colA ==colB and new_colB ==colA)or(colA==colB==new_colA==new_colB and new_rowA ==rowB and new_rowB ==rowA)):
                                                 reward[0]= -30
                                                 reward[1]= -30 #very negative
                                                 new_rowA, new_rowB, new_colA, new_colB = rowA,rowB,colA,colB       
@@ -360,6 +400,7 @@ class TaxiEnv(Env):
 
     def step(self, a):
         transitions = self.P[self.s][a]
+        print(transitions)
         i = categorical_sample([t[0] for t in transitions], self.np_random)
         p, s, r, t = transitions[i]
         self.laststate = self.s
@@ -584,30 +625,49 @@ class TaxiEnv(Env):
         outfile = StringIO()
 
         out = [[c.decode("utf-8") for c in line] for line in desc]
-        taxi_row, taxi_col, pass_idx, dest_idx = self.decode(self.s)
+        taxiA_row,taxiA_col,taxiB_row,taxiB_col, passA_loc, destA_idx,passB_loc,destB_idx = self.decode(self.s)
 
         def ul(x):
             return "_" if x == " " else x
-
-        if pass_idx < 4:
-            out[1 + taxi_row][2 * taxi_col + 1] = utils.colorize(
-                out[1 + taxi_row][2 * taxi_col + 1], "yellow", highlight=True
+        
+        out[1 + taxiA_row][2 * taxiA_col + 1] = utils.colorize(
+                out[1 + taxiA_row][2 * taxiA_col + 1], "gray", highlight=True
             )
-            pi, pj = self.locs[pass_idx]
-            out[1 + pi][2 * pj + 1] = utils.colorize(
-                out[1 + pi][2 * pj + 1], "blue", bold=True
+        out[1 + taxiB_row][2 * taxiB_col + 1] = utils.colorize(
+                ul(out[1 + taxiB_row][2 * taxiB_col + 1]), "yellow", highlight=True
+            )
+        if passA_loc < 4:
+            pi, pj = self.locs[passA_loc]
+            out[1 + pi][2 * pj + 1] = "1"
+        elif passA_loc == 4:
+            out[1 + taxiA_row][2 * taxiA_col + 1] = utils.colorize(
+                out[1 + taxiA_row][2 * taxiA_col + 1], "green", highlight=True
             )
         else:  # passenger in taxi
-            out[1 + taxi_row][2 * taxi_col + 1] = utils.colorize(
-                ul(out[1 + taxi_row][2 * taxi_col + 1]), "green", highlight=True
+            out[1 + taxiB_row][2 * taxiB_col + 1] = utils.colorize(
+                ul(out[1 + taxiB_row][2 * taxiB_col + 1]), "blue", highlight=True
+            )
+        
+        if passB_loc < 4:
+            pi, pj = self.locs[passB_loc]
+            out[1 + pi][2 * pj + 1] = "2"
+        elif passB_loc == 4:
+            out[1 + taxiA_row][2 * taxiA_col + 1] = utils.colorize(
+                out[1 + taxiA_row][2 * taxiA_col + 1], "green", highlight=True
+            )
+        else:  # passenger in taxi
+            out[1 + taxiB_row][2 * taxiB_col + 1] = utils.colorize(
+                ul(out[1 + taxiB_row][2 * taxiB_col + 1]), "blue", highlight=True
             )
 
-        di, dj = self.locs[dest_idx]
+        di, dj = self.locs[destA_idx]
         out[1 + di][2 * dj + 1] = utils.colorize(out[1 + di][2 * dj + 1], "magenta")
+        di, dj = self.locs[destB_idx]
+        out[1 + di][2 * dj + 1] = utils.colorize(out[1 + di][2 * dj + 1], "green")
         outfile.write("\n".join(["".join(row) for row in out]) + "\n")
         if self.lastaction is not None:
             outfile.write(
-                f"  ({['South', 'North', 'East', 'West', 'Pickup', 'Dropoff'][self.lastaction]})\n"
+                f"  ({['South|South','South|North','South|East','South|West','South|Pickup','South|Dropoff',  'North|South','North|North','North|East','North|West','North|Pickup','North|Dropoff', 'East|South','East|North','East|East','East|West','East|Pickup','East|Dropoff', 'West|South','West|North','West|East','West|West','West|Pickup','West|Dropoff', 'Pickup|South','Pickup|North','Pickup|East','Pickup|West','Pickup|Pickup','Pickup|Dropoff','Dropoff|South','Dropoff|North','Dropoff|East','Dropoff|West','Dropoff|Pickup','Dropoff|Dropoff'][self.lastaction[0]*6+self.lastaction[1]]})\n"
             )
         else:
             outfile.write("\n")
