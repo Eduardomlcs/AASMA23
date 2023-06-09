@@ -165,7 +165,7 @@ class TaxiEnv(Env):
                                             new_rowA, new_colA, new_passA_idx, new_destA_idx = rowA, colA, passA_idx, destA_idx
                                             new_rowB, new_colB, new_passB_idx, new_destB_idx = rowB, colB, passB_idx, destB_idx
                                             reward = [-1,-1]  # default reward when there is no pickup/dropoff
-                                            terminated = False
+                                            terminated = [False, False]
                                             taxiA_loc = (rowA, colA)
                                             taxiB_loc = (rowB, colB)
                                             #TODO Rewards
@@ -180,10 +180,10 @@ class TaxiEnv(Env):
                                             elif action[0] == 4:  # pickup
                                                 if passA_idx < 4 and taxiA_loc == locs[passA_idx] and passB_idx!=4:
                                                     new_passA_idx = 4
-                                                    reward[0] = 1
+                                                    reward[0] = 50
                                                 elif passB_idx < 4 and taxiA_loc == locs[passB_idx] and passA_idx!=4:
                                                     new_passB_idx = 4
-                                                    reward[0] = 1
+                                                    reward[0] = 50
                                                 else:  # passenger not at location
                                                     reward[0] = -10
                                             elif action[0] == 5:  # dropoff PRECISA DE SER ALTERADO
@@ -197,8 +197,8 @@ class TaxiEnv(Env):
                                                     auxdest=[0,1,2,3]
                                                     auxdest.pop(new_passA_idx)
                                                     new_destA_idx =random.choice(auxdest)
-                                                    terminated = True
-                                                    reward[0] = 20
+                                                    terminated[0] = True
+                                                    reward[0] = 300
                                                 elif(taxiA_loc == locs[destB_idx] and passB_idx ==4):
                                                     possible_new_locs=locs.copy()
                                                     possible_new_locs.pop(destB_idx)
@@ -208,8 +208,8 @@ class TaxiEnv(Env):
                                                     auxdest=[0,1,2,3]
                                                     auxdest.pop(new_passB_idx)
                                                     new_destB_idx =random.choice(auxdest)
-                                                    terminated = True
-                                                    reward[0] = 20
+                                                    terminated[0] = True
+                                                    reward[0] = 300
                                                 else:  # dropoff at wrong location
                                                     reward[0] = -10
                                                 
@@ -225,10 +225,10 @@ class TaxiEnv(Env):
                                             elif action[1] == 4:  # pickup
                                                 if passA_idx < 4 and taxiB_loc == locs[passA_idx] and passB_idx!=5:
                                                     new_passA_idx = 5
-                                                    reward[1] = 1
+                                                    reward[1] = 50
                                                 elif passB_idx < 4 and taxiB_loc == locs[passB_idx] and passA_idx!=5:
                                                     new_passB_idx = 5
-                                                    reward[1] = 1
+                                                    reward[1] = 50
                                                 else:  # passenger not at location
                                                     reward[1] = -10
                                             elif action[1] == 5:  # dropoff PRECISA DE SER ALTERADO
@@ -242,8 +242,8 @@ class TaxiEnv(Env):
                                                     auxdest=[0,1,2,3]
                                                     auxdest.pop(new_passB_idx)
                                                     new_destB_idx =random.choice(auxdest)
-                                                    terminated = True
-                                                    reward[1] = 20
+                                                    terminated[1] = True
+                                                    reward[1] = 300
                                                 elif (taxiB_loc == locs[destA_idx] and passA_idx == 5):
                                                     possible_new_locs=locs.copy()
                                                     possible_new_locs.pop(destA_idx)
@@ -253,8 +253,8 @@ class TaxiEnv(Env):
                                                     auxdest=[0,1,2,3]
                                                     auxdest.pop(new_passA_idx)
                                                     new_destA_idx =random.choice(auxdest)
-                                                    terminated = True
-                                                    reward[1] = 20
+                                                    terminated[1] = True
+                                                    reward[1] = 300
                                                 else:  # dropoff at wrong location
                                                     reward[1] = -10
                                                     

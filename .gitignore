@@ -160,3 +160,4 @@ cython_debug/
 #.idea/
 
 run.py
+qlearning.py
