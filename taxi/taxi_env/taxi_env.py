@@ -162,8 +162,8 @@ class TaxiEnv(Env):
                                             self.initial_state_distrib[state] += 1
                                         for action in self.actions:
                                             # defaults
-                                            new_rowA, new_colA, new_passA_idx = rowA, colA, passA_idx
-                                            new_rowB, new_colB, new_passB_idx = rowB, colB, passB_idx
+                                            new_rowA, new_colA, new_passA_idx, new_destA_idx = rowA, colA, passA_idx, destA_idx
+                                            new_rowB, new_colB, new_passB_idx, new_destB_idx = rowB, colB, passB_idx, destB_idx
                                             reward = [-1,-1]  # default reward when there is no pickup/dropoff
                                             terminated = False
                                             taxiA_loc = (rowA, colA)
@@ -196,7 +196,7 @@ class TaxiEnv(Env):
                                                     new_passA_idx = locs.index(random.choice(possible_new_locs))
                                                     auxdest=[0,1,2,3]
                                                     auxdest.pop(new_passA_idx)
-                                                    destA_idx =random.choice(auxdest)
+                                                    new_destA_idx =random.choice(auxdest)
                                                     terminated = True
                                                     reward[0] = 20
                                                 elif(taxiA_loc == locs[destB_idx] and passB_idx ==4):
@@ -207,7 +207,7 @@ class TaxiEnv(Env):
                                                     new_passB_idx = locs.index(random.choice(possible_new_locs))
                                                     auxdest=[0,1,2,3]
                                                     auxdest.pop(new_passB_idx)
-                                                    destB_idx =random.choice(auxdest)
+                                                    new_destB_idx =random.choice(auxdest)
                                                     terminated = True
                                                     reward[0] = 20
                                                 else:  # dropoff at wrong location
@@ -241,7 +241,7 @@ class TaxiEnv(Env):
                                                     new_passB_idx = locs.index(random.choice(possible_new_locs))
                                                     auxdest=[0,1,2,3]
                                                     auxdest.pop(new_passB_idx)
-                                                    destB_idx =random.choice(auxdest)
+                                                    new_destB_idx =random.choice(auxdest)
                                                     terminated = True
                                                     reward[1] = 20
                                                 elif (taxiB_loc == locs[destA_idx] and passA_idx == 5):
@@ -252,7 +252,7 @@ class TaxiEnv(Env):
                                                     new_passA_idx = locs.index(random.choice(possible_new_locs))
                                                     auxdest=[0,1,2,3]
                                                     auxdest.pop(new_passA_idx)
-                                                    destA_idx =random.choice(auxdest)
+                                                    new_destA_idx =random.choice(auxdest)
                                                     terminated = True
                                                     reward[1] = 20
                                                 else:  # dropoff at wrong location
@@ -262,13 +262,15 @@ class TaxiEnv(Env):
                                             if((new_rowA==new_rowB and new_colA==new_colB)or(rowA==rowB==new_rowA==new_rowB and new_colA ==colB and new_colB ==colA)or(colA==colB==new_colA==new_colB and new_rowA ==rowB and new_rowB ==rowA)):
                                                 reward[0]= -30
                                                 reward[1]= -30 #very negative
-                                                new_rowA, new_rowB, new_colA, new_colB = rowA,rowB,colA,colB       
+                                                new_rowA, new_rowB, new_colA, new_colB = rowA,rowB,colA,colB
+                                            
                                             new_state = self.encode(
-                                                new_rowA, new_colA,new_rowB,new_colB, new_passA_idx, destA_idx, new_passB_idx, destB_idx
+                                                new_rowA, new_colA,new_rowB,new_colB, new_passA_idx, new_destA_idx, new_passB_idx, new_destB_idx
                                             )
                                             self.P[state][action].append(
                                                 (1.0, new_state, reward, terminated)
                                             )
+                                            a=0
         self.initial_state_distrib /= self.initial_state_distrib.sum()
         self.action_space = spaces.Discrete(num_actions)
         self.observation_space = spaces.Discrete(num_states)
