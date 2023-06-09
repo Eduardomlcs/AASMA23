@@ -29,6 +29,8 @@ class HeuristicAgent(Agent):
         super(HeuristicAgent, self).__init__("Heuristic Agent")
         self.locs = [(0, 0), (0, 4), (4, 0), (4, 3)]
         self.id = id
+        self.lastaction = None
+        self.short_distance = None
 
     def heuristic(self,state):
         # Calculate the estimated cost from the current state to the goal state (destination)
@@ -55,6 +57,11 @@ class HeuristicAgent(Agent):
     def action(self,info) -> int:
         # Get the valid actions from the environment observation
         valid_actions = info["valid_actions"]
+        for action in valid_actions:
+            action_aux = action[0] if self.id == 1 else action[1]
+            if action_aux == 4:
+                return action_aux 
+        print(info["action_mask"])
         print(valid_actions)
         valid_states = info["valid_states"]
         # Calculate the heuristic value for each valid action
@@ -62,6 +69,7 @@ class HeuristicAgent(Agent):
         print(heuristic_values)
         # Choose the action with the lowest heuristic value
         actions = valid_actions[np.argmin(heuristic_values)]
-        print(actions)
         action = actions[0] if self.id == 1 else actions[1]
+        self.lastaction = action
+        self.short_distance = (np.amin(heuristic_values),np.argmin(heuristic_values))
         return action

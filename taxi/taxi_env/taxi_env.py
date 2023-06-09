@@ -335,38 +335,43 @@ class TaxiEnv(Env):
     
     def valid_actions(self,mask):
         valid = []
-        for i in range(2):
-            for j in range(6):
-                if mask[i][j] == 1:
-                    valid = valid + [(i,j),]
+        for i in range(len(mask[0])):
+            if mask[0][i] == 1:
+                for j in range(len(mask[1])):
+                    if mask[1][j] == 1:
+                            valid.append((i, j))
         return valid
     
     def valid_states(self,state,valid_actions):
         valid = []
+        actions_remove = []
         for action in valid_actions:
             transitions = self.P[state][action]
             i = categorical_sample([t[0] for t in transitions], self.np_random)
             _, s, _, _ = transitions[i]
-            valid = valid + [s,]
-        return valid
+            if self.laststate != s:
+                valid = valid + [s,]
+            else:
+                actions_remove = actions_remove + [action,]
+        for action in actions_remove:
+            valid_actions.remove(action)
+        return (valid, valid_actions)
 
 
     def step(self, a):
         transitions = self.P[self.s][a]
-        print(a)
-        print(transitions)
         i = categorical_sample([t[0] for t in transitions], self.np_random)
-        print(i)
         p, s, r, t = transitions[i]
-        
+        self.laststate = self.s
         self.s = s
         self.lastaction = a
         actions = self.valid_actions(self.action_mask(s))
         states = self.valid_states(s,actions)
-        assert len(states) == len(actions)
-        #if self.render_mode == "human":
-            #self.render()
-        return (int(s), r, t, False, {"prob": p, "action_mask": self.action_mask(s), "valid_states": states, "valid_actions": actions})
+        print(states)
+        assert len(states[0]) == len(states[1])
+        if self.render_mode == "human":
+            self.render()
+        return (int(s), r, t, False, {"prob": p, "action_mask": self.action_mask(s), "valid_states": states[0], "valid_actions": states[1]})
 
     def reset(
         self,
@@ -376,6 +381,7 @@ class TaxiEnv(Env):
     ):
         super().reset(seed=seed)
         self.s = categorical_sample(self.initial_state_distrib, self.np_random)
+        self.laststate = None
         self.lastaction = None
         self.a_mask = None
         self.taxi_orientation = 0
@@ -385,7 +391,7 @@ class TaxiEnv(Env):
 
         if self.render_mode == "human":
             self.render()
-        return int(self.s), {"prob": 1.0, "action_mask": self.action_mask(self.s), "valid_states": states, "valid_actions": actions}
+        return int(self.s), {"prob": 1.0, "action_mask": self.action_mask(self.s), "valid_states": states[0], "valid_actions": states[1]}
 
     def render(self):
         if self.render_mode is None:
