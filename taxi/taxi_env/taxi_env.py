@@ -353,10 +353,7 @@ class TaxiEnv(Env):
 
     def step(self, a):
         transitions = self.P[self.s][a]
-        print(a)
-        print(transitions)
         i = categorical_sample([t[0] for t in transitions], self.np_random)
-        print(i)
         p, s, r, t = transitions[i]
         
         self.s = s
@@ -578,30 +575,49 @@ class TaxiEnv(Env):
         outfile = StringIO()
 
         out = [[c.decode("utf-8") for c in line] for line in desc]
-        taxi_row, taxi_col, pass_idx, dest_idx = self.decode(self.s)
+        taxiA_row,taxiA_col,taxiB_row,taxiB_col, passA_loc, destA_idx,passB_loc,destB_idx = self.decode(self.s)
 
         def ul(x):
             return "_" if x == " " else x
-
-        if pass_idx < 4:
-            out[1 + taxi_row][2 * taxi_col + 1] = utils.colorize(
-                out[1 + taxi_row][2 * taxi_col + 1], "yellow", highlight=True
+        
+        out[1 + taxiA_row][2 * taxiA_col + 1] = utils.colorize(
+                out[1 + taxiA_row][2 * taxiA_col + 1], "gray", highlight=True
             )
-            pi, pj = self.locs[pass_idx]
-            out[1 + pi][2 * pj + 1] = utils.colorize(
-                out[1 + pi][2 * pj + 1], "blue", bold=True
+        out[1 + taxiB_row][2 * taxiB_col + 1] = utils.colorize(
+                ul(out[1 + taxiB_row][2 * taxiB_col + 1]), "yellow", highlight=True
+            )
+        if passA_loc < 4:
+            pi, pj = self.locs[passA_loc]
+            out[1 + pi][2 * pj + 1] = "1"
+        elif passA_loc == 4:
+            out[1 + taxiA_row][2 * taxiA_col + 1] = utils.colorize(
+                out[1 + taxiA_row][2 * taxiA_col + 1], "green", highlight=True
             )
         else:  # passenger in taxi
-            out[1 + taxi_row][2 * taxi_col + 1] = utils.colorize(
-                ul(out[1 + taxi_row][2 * taxi_col + 1]), "green", highlight=True
+            out[1 + taxiB_row][2 * taxiB_col + 1] = utils.colorize(
+                ul(out[1 + taxiB_row][2 * taxiB_col + 1]), "blue", highlight=True
+            )
+        
+        if passB_loc < 4:
+            pi, pj = self.locs[passB_loc]
+            out[1 + pi][2 * pj + 1] = "2"
+        elif passB_loc == 4:
+            out[1 + taxiA_row][2 * taxiA_col + 1] = utils.colorize(
+                out[1 + taxiA_row][2 * taxiA_col + 1], "green", highlight=True
+            )
+        else:  # passenger in taxi
+            out[1 + taxiB_row][2 * taxiB_col + 1] = utils.colorize(
+                ul(out[1 + taxiB_row][2 * taxiB_col + 1]), "blue", highlight=True
             )
 
-        di, dj = self.locs[dest_idx]
+        di, dj = self.locs[destA_idx]
         out[1 + di][2 * dj + 1] = utils.colorize(out[1 + di][2 * dj + 1], "magenta")
+        di, dj = self.locs[destB_idx]
+        out[1 + di][2 * dj + 1] = utils.colorize(out[1 + di][2 * dj + 1], "green")
         outfile.write("\n".join(["".join(row) for row in out]) + "\n")
         if self.lastaction is not None:
             outfile.write(
-                f"  ({['South', 'North', 'East', 'West', 'Pickup', 'Dropoff'][self.lastaction]})\n"
+                f"  ({['South|South','South|North','South|East','South|West','South|Pickup','South|Dropoff',  'North|South','North|North','North|East','North|West','North|Pickup','North|Dropoff', 'East|South','East|North','East|East','East|West','East|Pickup','East|Dropoff', 'West|South','West|North','West|East','West|West','West|Pickup','West|Dropoff', 'Pickup|South','Pickup|North','Pickup|East','Pickup|West','Pickup|Pickup','Pickup|Dropoff','Dropoff|South','Dropoff|North','Dropoff|East','Dropoff|West','Dropoff|Pickup','Dropoff|Dropoff'][self.lastaction[0]*6+self.lastaction[1]]})\n"
             )
         else:
             outfile.write("\n")
