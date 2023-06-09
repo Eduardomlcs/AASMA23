@@ -4,7 +4,7 @@ from os import path
 from typing import Optional
 
 import numpy as np
-
+import random
 import gymnasium as gym
 from gymnasium import Env, spaces, utils
 from gymnasium.envs.toy_text.utils import categorical_sample
@@ -180,14 +180,34 @@ class TaxiEnv(Env):
                                             elif action[0] == 4:  # pickup
                                                 if passA_idx < 4 and taxiA_loc == locs[passA_idx] and passB_idx!=4:
                                                     new_passA_idx = 4
+                                                    reward[0] = 1
                                                 elif passB_idx < 4 and taxiA_loc == locs[passB_idx] and passA_idx!=4:
                                                     new_passB_idx = 4
+                                                    reward[0] = 1
                                                 else:  # passenger not at location
                                                     reward[0] = -10
                                             elif action[0] == 5:  # dropoff PRECISA DE SER ALTERADO
                                                 #TODO terminacao do programa
-                                                if (taxiA_loc == locs[destA_idx]) and passA_idx == 4:
-                                                    new_passA_idx = destA_idx
+                                                if (taxiA_loc == locs[destA_idx] and passA_idx == 4):
+                                                    possible_new_locs=locs.copy()
+                                                    possible_new_locs.pop(destA_idx)
+                                                    if(passB_idx<4 and passB_idx!=destA_idx):
+                                                        possible_new_locs.remove(locs[passB_idx])
+                                                    new_passA_idx = locs.index(random.choice(possible_new_locs))
+                                                    auxdest=[0,1,2,3]
+                                                    auxdest.pop(new_passA_idx)
+                                                    destA_idx =random.choice(auxdest)
+                                                    terminated = True
+                                                    reward[0] = 20
+                                                elif(taxiA_loc == locs[destB_idx] and passB_idx ==4):
+                                                    possible_new_locs=locs.copy()
+                                                    possible_new_locs.pop(destB_idx)
+                                                    if(passA_idx<4 and passA_idx!=destB_idx):
+                                                        possible_new_locs.remove(locs[passA_idx])
+                                                    new_passB_idx = locs.index(random.choice(possible_new_locs))
+                                                    auxdest=[0,1,2,3]
+                                                    auxdest.pop(new_passB_idx)
+                                                    destB_idx =random.choice(auxdest)
                                                     terminated = True
                                                     reward[0] = 20
                                                 else:  # dropoff at wrong location
@@ -205,21 +225,41 @@ class TaxiEnv(Env):
                                             elif action[1] == 4:  # pickup
                                                 if passA_idx < 4 and taxiB_loc == locs[passA_idx] and passB_idx!=5:
                                                     new_passA_idx = 5
+                                                    reward[1] = 1
                                                 elif passB_idx < 4 and taxiB_loc == locs[passB_idx] and passA_idx!=5:
                                                     new_passB_idx = 5
+                                                    reward[1] = 1
                                                 else:  # passenger not at location
                                                     reward[1] = -10
                                             elif action[1] == 5:  # dropoff PRECISA DE SER ALTERADO
                                                 #TODO terminacao do programa
-                                                if (taxiB_loc == locs[destB_idx]) and passB_idx == 5:
-                                                    new_passB_idx = destB_idx
+                                                if (taxiB_loc == locs[destB_idx] and passB_idx == 5):
+                                                    possible_new_locs=locs.copy()
+                                                    possible_new_locs.pop(destB_idx)
+                                                    if(passA_idx<4 and passA_idx!=destB_idx):
+                                                        possible_new_locs.remove(locs[passA_idx])
+                                                    new_passB_idx = locs.index(random.choice(possible_new_locs))
+                                                    auxdest=[0,1,2,3]
+                                                    auxdest.pop(new_passB_idx)
+                                                    destB_idx =random.choice(auxdest)
+                                                    terminated = True
+                                                    reward[1] = 20
+                                                elif (taxiB_loc == locs[destA_idx] and passA_idx == 5):
+                                                    possible_new_locs=locs.copy()
+                                                    possible_new_locs.pop(destA_idx)
+                                                    if(passB_idx<4 and passB_idx!=destA_idx):
+                                                        possible_new_locs.remove(locs[passB_idx])
+                                                    new_passA_idx = locs.index(random.choice(possible_new_locs))
+                                                    auxdest=[0,1,2,3]
+                                                    auxdest.pop(new_passA_idx)
+                                                    destA_idx =random.choice(auxdest)
                                                     terminated = True
                                                     reward[1] = 20
                                                 else:  # dropoff at wrong location
                                                     reward[1] = -10
                                                     
                                             #Choques entre carros
-                                            if(new_rowA==new_rowB and new_colA==new_colB):
+                                            if((new_rowA==new_rowB and new_colA==new_colB)or(rowA==rowB==new_rowA==new_rowB and new_colA ==colB and new_colB ==colA)or(colA==colB==new_colA==new_colB and new_rowA ==rowB and new_rowB ==rowA)):
                                                 reward[0]= -30
                                                 reward[1]= -30 #very negative
                                                 new_rowA, new_rowB, new_colA, new_colB = rowA,rowB,colA,colB       
