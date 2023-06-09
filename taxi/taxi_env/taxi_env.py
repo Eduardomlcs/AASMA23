@@ -158,7 +158,7 @@ class TaxiEnv(Env):
                                 for passB_idx in range(len(locs) + 2):  # +1 for being inside taxi
                                     for destB_idx in range(len(locs)):
                                         state = self.encode(rowA, colA,rowB,colB, passA_idx, destA_idx, passB_idx, destB_idx)
-                                        if passA_idx < 4 and passB_idx<4 and passA_idx != destA_idx and passB_idx!= destB_idx and (rowA != rowB or colA != colB ):
+                                        if passA_idx < 4 and passB_idx<4 and passA_idx != destA_idx and passB_idx!= destB_idx and (rowA != rowB or colA != colB ) and passA_idx!=passB_idx:
                                             self.initial_state_distrib[state] += 1
                                         for action in self.actions:
                                             # defaults
@@ -393,6 +393,7 @@ class TaxiEnv(Env):
 
     def step(self, a):
         transitions = self.P[self.s][a]
+        print(transitions)
         i = categorical_sample([t[0] for t in transitions], self.np_random)
         p, s, r, t = transitions[i]
         
